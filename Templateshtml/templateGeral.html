@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="estiloGeral.css">
+    <title>Template Geral</title>
+</head>
+
+<body>
+    <div id="entradasLine" class="flexDiv">
+        <label class="estiloCheckBox" id="rev">
+            <input id="rev" type="checkbox">
+            Revista
+        </label>
+
+        <select id="selectRevCol">
+            <option value="default">Selecione uma Revista/Coleção</option>
+        </select>   
+
+        <input type="text" placeholder="Página" id="Labelpage">
+
+        <button id="pesquisar" onclick="getSaidas()">Pesquisar</button>
+        <!--    document.getElementById('dataIni').value -->
+        <button id="limpar" onclick="limparCampos()">Limpar</button>
+        <button id="geraexcel" onclick="exportaExcel('saidas','nomeArquivo')">Gerar Excel</button>
+    </div>
+    </div>
+
+
+    <table id="saidas">
+    </table>
+
+
+<script type='text/javascript' src="script.js"></script>
+<script>
+
+
+        var uri = 'data:application/vnd.ms-excel;base64,'
+            , template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>'
+            , base64 = function (s) { return window.btoa(unescape(encodeURIComponent(s))) }
+            , format = function (s, c) { return s.replace(/{(\w+)}/g, function (m, p) { return c[p]; }) }
+
+
+        function exportaExcel(table, nomeArquivo) {
+            if (!table.nodeType) table = document.getElementById(table)
+            var ctx = { worksheet: 'Plan 1', table: table.innerHTML }
+            var link = document.createElement("a");
+            link.href = uri + base64(format(template, ctx));
+            link.download = nomeArquivo + ".xls";
+            link.click();
+        }
+
+
+        function limparCampos() {
+            var inputs = document.getElementsByTagName('input');
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].type == 'text') {
+                    inputs[i].value = '';
+                } else if (inputs[i].type == 'checkbox') {
+                    inputs[i].checked = false;
+                }
+            }
+        }
+
+        function getSaidas() {
+            fetch(`http://192.168.0.253:3336/ConsultaPlanilhaSaidaLogistica/`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application.json',
+                    'Content-Type': 'application/json',
+                    "Access-Control-Allow-Origin": "*"
+                },
+                body: JSON.stringify({ DAT_INI: '2023-09-09' })
+            })
+                .then(resp => resp.json())
+                .then(resp => {
+                    let tabela = document.getElementById('saidas')
+                    tabela.innerHTML = `<thead>
+                            <tr>
+                        ${Object.keys(resp[0]).map((val)=>`<th>${val}</th>`).join('')}
+                        </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>`;
+                    tabela = document.querySelector('#saidas tbody')
+                    for (let objeto of resp) {
+                        let linha = tabela.insertRow();
+                        for (let chave in objeto) {
+                            if (chave == 'data') {
+                                objeto[chave] = objeto[chave].split("T")[0]
+                            }
+                            let celula = linha.insertCell();
+                            let texto = document.createTextNode(objeto[chave]);
+                            celula.appendChild(texto);
+                        }
+                    }
+                })
+                .catch(resp => {
+                    console.log("ERROR SERVER")
+                    console.log(resp)
+                })
+        }
+
+        fetch(`http://192.168.0.253:3336/ConsultaColecoesRevsitas/`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application.json',
+            'Content-Type': 'application/json',
+            "Access-Control-Allow-Origin": "*"
+        }
+    })
+        .then(resp => resp.json())
+        .then(resp => {
+            select = document.getElementById('selectRevCol')
+            resp.forEach((val)=> select.insertAdjacentHTML("beforeend",`<option value="${val.rev_num_rev}">${val.rev_nom}</option>`)) 
+        })
+        .catch(resp => {
+            console.log("ERROR SERVER")
+            console.log(resp)
+        })
+
+        /*
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js">
+class SuaClasse {
+    // ... outras funções ...
+  
+    static exportaExcel(table, nomeArquivo) {
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.table_to_sheet(document.getElementById(table));
+  
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Planilha 1');
+  
+      // Salvar o arquivo
+      XLSX.writeFile(workbook, `${nomeArquivo}.xlsx`);
+    }
+  }
+  
+  // Exemplo de uso
+  SuaClasse.exportaExcel('tabela', 'arquivo');
+  
+*/
+
+    </script>
+</body>
+
+</html>

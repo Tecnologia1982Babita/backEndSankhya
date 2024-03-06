@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="estiloTeste11122023.css">
+    <title>Template Geral</title>
+    
+    <style>
+        :root {
+            --color-light: white;
+            --color-dark: #212121;
+            --color-signal: #6aa50b;
+            --color-shadow: #6aa50b;
+            --size-bezel: .5rem;
+            --size-radius: 4px;
+            
+            line-height: 1.4;
+            
+            font-family: 'Inter', sans-serif;
+            font-size: calc(.6rem + .4vw);
+            color: var(--color-dark);
+            background: var(--color-light);
+            font-weight: 300;
+            padding: 0 calc(.5rem * 3);
+            }
+
+h1, h2, h3 {
+  font-weight: 900;
+}
+
+mark {
+  background: var(--color-signal);
+  color: var(--color-dark);
+  font-weight: bold;
+  padding: 0 0.2em;
+}
+
+.card {
+  background: var(--color-light);
+  padding: calc(4 * .5rem);
+  margin-top: calc(4 * .5rem);
+  border-radius: var(--size-radius);
+  border: 3px solid var(--color-shadow, currentColor);
+  box-shadow: .5rem .5rem 0 var(--color-shadow, currentColor);
+}
+
+
+.button-group {
+  margin-top: calc(.5rem * 2.5);
+}
+
+button {
+  color: currentColor;
+  padding: .5rem calc(.5rem * 2);
+  background: var(--color-signal);
+  border: none;
+  border-radius: var(--size-radius);
+  font-weight: 900;
+  
+  &[type=reset]{
+    background: var(--color-light);
+    font-weight: 200;
+  } 
+}
+
+button + button {
+  margin-left: calc(.5rem * 2);
+}
+
+.icon {
+  display: inline-block;
+  width: 1em; height: 1em;
+  margin-right: .5em;
+}
+
+.hidden {
+  display: none;
+}
+
+        .flexDiv{
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-start;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="filtroPag" class="flexDiv">
+        <div>
+            <label>Data Inicial</label>
+            <input type="date" id="dataIni"/>
+        </div>
+
+        <div>
+            <label>Data Final</label>
+            <input type="date" id="dataFim"/>
+        </div>
+
+        <input type="text" id="codVend" placeholder="Codigo Vendedora"/>
+    </div>
+
+    <div id="btnLine" class="flexDiv">
+        
+    </div>
+
+    <div class="card card--accent">
+        <h2>Tipo Pagamento Vendedora</h2>
+        <label class="input">
+          <input class="input__field" type="text" placeholder=" " />
+          <span class="input__label">Some Fancy Label</span>
+        </label>
+        
+        <div class="button-group">
+            <button id="pesquisar" onclick="getSaidas()">Pesquisar</button>
+            <button id="limpar" onclick="limparCampos()">Limpar</button>
+            <button id="geraexcel" onclick="exportaExcel('pagVendedoras','RelacoesVendedoras')">Gerar Excel</button>
+        </div>
+      </div>
+
+
+    <table id="pagVendedoras">
+    </table>
+    
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script>
+
+        function formatarDataDDMMAA(data) {
+            // Obtém os componentes da data
+            const dia = data.getDate().toString().padStart(2, '0');
+            const mes = (data.getMonth() + 1).toString().padStart(2, '0'); // O mês é baseado em zero
+            const ano = data.getFullYear().toString().slice(-2);
+
+            // Retorna a data formatada
+            return `${dia}${mes}${ano}`;
+        }
+
+        // Exemplo de uso
+        const dataAtual = new Date();
+        const dataFormatada = formatarDataDDMMAA(dataAtual);
+
+        var uri = 'data:application/vnd.ms-excel;base64,'
+            , template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>'
+            , base64 = function (s) { return window.btoa(unescape(encodeURIComponent(s))) }
+            , format = function (s, c) { return s.replace(/{(\w+)}/g, function (m, p) { return c[p]; }) }
+
+
+        function exportaExcel(table, nomeArquivo) {
+            if (!table.nodeType) table = document.getElementById(table)
+            var ctx = { worksheet: 'Plan 1', table: table.innerHTML }
+            var link = document.createElement("a");
+            link.href = uri + base64(format(template, ctx));
+            link.download = nomeArquivo + dataFormatada + ".xls";
+            link.click();
+        }
+
+
+        function limparCampos() {
+            var inputs = document.getElementsByTagName('input');
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].type == 'text') {
+                    inputs[i].value = '';
+                } else if (inputs[i].type == 'checkbox') {
+                    inputs[i].checked = false;
+                }
+            }
+        }
+
+        function getSaidas() {
+
+            fetch(`http://192.168.0.137:3336/ConsultaTipoPagVendedora/`, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application.json',
+                    'Content-Type': 'application/json',
+                    "Access-Control-Allow-Origin": "*"
+                },
+                body: JSON.stringify({ DAT_INI: '', DATAFIM: '', CODIGOVEND: '' })
+            })
+                .then(resp => resp.json())
+                .then(resp => {
+                    if (resp.Error){
+                        alert(resp.Error)
+                    }else{
+                        console.log(resp)
+
+                    }
+                })
+                .catch(resp => {
+                    console.log("ERROR SERVER")
+                    console.log(resp)
+                })
+        }
+
+        
+
+
+    </script>
+</body>
+
+</html>

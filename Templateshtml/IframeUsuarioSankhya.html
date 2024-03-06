@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meu Iframe</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        iframe {
+            position: absolute;
+            top:0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Obter o nome do usuário
+        const nomeUsuario = Array.from(window.parent.parent.document.getElementsByTagName("script"))
+        .map((val) => val.textContent)
+        .filter((val) => val.indexOf("nomeUsu") >= 0)[0]
+        .split('nomeUsu = "')[1]
+        .split('";')[0];
+
+        // Verificar se o nome do usuário está pronto
+        if (nomeUsuario) {
+        // Criar o elemento iframe
+        const iframe = document.createElement('iframe');
+        iframe.id = 'IframeFrontSankhya_TipoPagamentosVendedoras';
+        iframe.src = `http://192.168.0.137:3386?US=${nomeUsuario}`;
+
+        // Adicionar o iframe ao final do corpo do documento
+        document.body.appendChild(iframe);
+        } else {
+            console.error('O nome do usuário não está disponível.');
+        }
+
+    
+    </script>
+</body>
+</html>

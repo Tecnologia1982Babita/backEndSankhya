@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+    <title>Tranferencia de Saída</title>
+
+    <style>
+        
+            table{
+                font-size: 1em;
+                width: 100%;
+                border-collapse: collapse;
+                text-align: center;
+                margin-top: 3%;
+            }
+
+
+            th{
+                color: #047e29;
+            }
+
+
+            td, th, table{
+                border: 1px solid #047e29;
+            }
+
+            td, th{
+                padding: 1% 0%;
+                text-align: center;
+            }
+        
+        tr:nth-child(even) {
+          background-color: #c9ffd9;
+        }
+
+        input {
+            appearance: none;
+            border: none;
+            outline: none;
+            border-bottom: .2em solid #047e29;
+            background: rgba(#047e29, .2);
+            border-radius: .2em .2em 0 0;
+            color: #047e29;
+            width: 100px;
+            flex: 0 0 10%;
+            height: fit-content;
+            margin: 1% 2%;
+        }
+
+        button:is(:hover,:focus,:active){
+            cursor: pointer;
+            background: #047e29;
+            color: #fff;
+        }
+
+        button {
+            appearance: none;
+            border: 0.2em solid #047e29;
+            background: hsl(0 0 0/0);
+            padding: 0.85em 1.5em;
+            color: #047e29;
+            border-radius: 2em;
+            transition: 0.5s;
+            margin: 2% 2%;
+        }
+
+        .flexDiv{
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-start;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="entradasLine" class="flexDiv">
+
+    </div>
+    <table id="saidas">
+    </table>
+
+<script>
+
+const components = [
+  {tipoComponent : 'input', id: 'dataIni', type: 'date', placeholder: ''},
+  {tipoComponent : 'button', id: 'pesquisar', func: ()=>getSaidas(document.getElementById('dataIni').value), text: 'Pesquisar'},
+  {tipoComponent : 'button', id: 'geraexcel', func: ()=>exportaExcel("saidas",
+            "TransfSaida"+document.getElementById('dataIni').value.split("-").reverse().join("")+".xls"), text: 'Gerar Excel'},
+];
+
+for (let x of components){
+    createComponent(x);
+}
+
+
+
+function createComponent(params) {
+    let component;
+    if (params.tipoComponent === 'input') {
+        component = document.createElement('input');
+        component.type = params.type;
+        component.placeholder = params.placeholder
+    } else if (params.tipoComponent === 'button') {
+        component = document.createElement('button');
+        component.onclick = params.func;
+        component.textContent = params.text;
+    }
+    component.id = params.id;
+
+    document.getElementById('entradasLine').appendChild(component);
+}
+
+var uri = 'data:application/vnd.ms-excel;base64,'
+            , template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>'
+            , base64 = function(s) { return window.btoa(unescape(encodeURIComponent(s))) }
+            , format = function(s, c) { return s.replace(/{(\w+)}/g, function(m, p) { return c[p]; }) }
+
+
+function exportaExcel(table, name) {
+            if (!table.nodeType) table = document.getElementById(table)
+            var ctx = {worksheet: name || 'Worksheet', table: table.innerHTML}
+            var link = document.createElement("a");
+              link.href = uri + base64(format(template, ctx));
+              link.download = "TransfSaida"+document.getElementById('dataIni').value.split("-").reverse().join("")+".xls";
+              link.click();
+            //window.location.href = uri + base64(format(template, ctx))
+          }
+
+
+function getSaidas (dataIni){
+        fetch(`http://192.168.0.253:3336/ConsultaPlanilhaSaidaLogistica/`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application.json',
+                'Content-Type': 'application/json',
+                "Access-Control-Allow-Origin": "*"
+            },
+            body: JSON.stringify({DAT_INI : dataIni})
+            })
+            .then(resp => resp.json())
+            .then(resp => {
+                let tabela = document.getElementById('saidas')
+
+                tabela.innerHTML = `<thead>
+                            <tr>
+                        <th>codigofab</th>
+                        <th>data</th>
+                        <th>destino</th>
+                        <th>documento</th>
+                        <th>codigopro</th>
+                        <th>produtos_nfabricante</th>
+                        <th>qtde</th>
+                        <th>rev_nom</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+            
+                        </tbody>`;
+                for (let objeto of resp) {
+                    let linha = tabela.insertRow();
+                    for (let chave in objeto) {
+                        if(chave == 'data'){
+                            objeto[chave] = objeto[chave].split("T")[0]
+                        }
+                        let celula = linha.insertCell();
+                        let texto = document.createTextNode(objeto[chave]);
+                        celula.appendChild(texto);
+                    }
+                    }
+            })
+            .catch(resp => {
+                console.log("ERROR SERVER")
+                console.log(resp)
+            })
+}
+   
+
+</script>
+</body>
+</html>

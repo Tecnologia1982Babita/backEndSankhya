@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8">
+    <link rel="stylesheet" type="text/css" href="estiloGeral.css">
+    <title>Template Geral</title>
+
+    <style>
+        table{
+    font-size: 1em;
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+    margin-top: 3%;
+}
+
+
+thead tr{
+    color: #047e29;
+}
+
+
+td, th, table{
+    border: 1px solid #047e29;
+}
+
+td, th{
+    min-width: 20px;
+    padding: 1% 0%;
+    text-align: center;
+}
+
+tr:nth-child(even) {
+    background-color: #c9ffd9;
+}
+
+tr:nth-child(even):hover {
+    background-color: #014114;
+}
+tr:hover{
+    cursor: pointer;
+}
+tbody tr:hover{
+    background-color: #014114;
+    color: #FFFFFF;
+}
+
+select, option{
+border: .2em solid #047e29;
+background: rgba(#047e29, .2);
+border-radius: .4em .4em .4em .4em;
+padding: .4em;
+color: #047e29;
+flex: 0 0 20%;
+}
+
+button:is(:hover,:focus,:active){
+cursor: pointer;
+background: #047e29;
+color: #fff;
+}
+
+button {
+    appearance: none;
+    border: 0.2em solid #047e29;
+    background: hsl(0 0 0/0);
+    padding: 0.85em 1.5em;
+    color: #047e29;
+    border-radius: 2em;
+    transition: 0.5s;
+    margin: 1% 1%;
+    flex: 0 0 8%;
+}
+
+.flexDiv{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+input[type="text"], input[type="number"] {
+    appearance: none;
+    border: none;
+    outline: none;
+    border-bottom: .2em solid #047e29;
+    background: rgba(#047e29, .2);
+    border-radius: .2em .2em 0 0;
+    color: #047e29;
+    width: 100px;
+    flex: 0 0 10%;
+    height: fit-content;
+    margin: 1% 2%;
+    width: fit-content;
+}
+
+
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    margin: 0;
+    margin-right: 5px;
+    font: inherit;
+    color: #fff;
+    width: 1.15em;
+    height: 1.15em;
+    border: 0.15em solid #047e29;
+    border-radius: 0.15em;
+    transform: translateY(-0.075em);
+    display: grid;
+    place-content: center;
+}
+
+input[type="checkbox"]::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em #047e29;
+    background-color: CanvasText;
+}
+
+input[type="checkbox"]:checked::before {
+    transform: scale(1);
+    box-shadow: inset 1em 1em #047e29;
+}
+
+input[type="checkbox"]:focus {
+    outline: max(2px, 0.15em) solid currentColor;
+    outline-offset: max(2px, 0.15em);
+}
+
+.estiloCheckBox{
+    flex: 0 0 6%;
+    display: flex;
+    min-width: fit-content;
+}
+@import url('https://fonts.googleapis.com/css2?family=Cardo:wght@700&display=swap');
+#totalEstoque{
+    text-align: center;
+    font-size: 2em;
+    font-family: 'Cardo', serif;
+}
+    </style>
+</head>
+
+<body>
+    <div id="entradasLine" class="flexDiv">
+
+        <select id="selectRevCol">
+        <option value="default">Selecione uma Revista/Coleção</option>
+        </select>   
+        <input type="text" placeholder="Código Forn." id="fornCod">
+        <input type="text" placeholder="Item" id="item">
+        <input type="text" placeholder="Página" id="page">
+    </div>
+    
+    <div id="btnLine" class="flexDiv">
+        <button id="pesquisar" onclick="consultaEstoque()">Pesquisar</button>
+        <button id="limpar" onclick="limparCampos()">Limpar</button>
+        <button id="geraexcel" onclick="exportaExcel('estoqueTable','PlanilhaEstoque')">Gerar Excel</button>
+    </div>
+
+    </div>
+    <div id="totalEstoque"></div>
+    <table id="estoqueTable">
+    </table>
+
+
+<script type='text/javascript' src="script.js"></script>
+<script>
+
+        
+    const nomeUsuario = Array.from(window.parent.parent.document.getElementsByTagName("script")).map((val) => val.textContent)
+        .filter((val)=> val.indexOf("nomeUsu") >= 0)[0].split('nomeUsu = "')[1].split('";')[0]
+    let shop = 2;
+
+        function limparCampos() {
+            var inputs = document.getElementsByTagName('input');
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].type == 'text') {
+                    inputs[i].value = '';
+                } else if (inputs[i].type == 'checkbox') {
+                    inputs[i].checked = false;
+                }
+            }
+
+            var selects = document.getElementsByTagName('select')
+            for (var i = 0; i < selects.length; i++) {
+                selects[i].value = 'default';
+            }
+            
+        }
+
+
+        fetch(`http://192.168.0.253:3336/ConsultaUsuario/`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application.json',
+            'Content-Type': 'application/json',
+            "Access-Control-Allow-Origin": "*"
+        },
+        body: JSON.stringify({nomeusu: nomeUsuario})
+    })
+        .then(resp => resp.json())
+        .then(resp => {
+            resp = resp[0]
+            shop = resp.codemp - 500
+        })
+
+    fetch(`http://192.168.0.253:3336/ConsultaColecoesRevsitas/`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application.json',
+            'Content-Type': 'application/json',
+            "Access-Control-Allow-Origin": "*"
+        }
+    })
+        .then(resp => resp.json())
+        .then(resp => {
+            select = document.getElementById('selectRevCol')
+            resp.forEach((val)=> select.insertAdjacentHTML("beforeend",`<option value="${val.rev_num_rev}">${val.rev_nom}</option>`)) 
+        })
+        .catch(resp => {
+            console.log("ERROR SERVER")
+            console.log(resp)
+        })
+
+
+
+    function consultaEstoque(){
+        let valores = {
+            CODEMP : shop,
+            AD_CODREV : parseInt(document.getElementById('selectRevCol').value),
+            AD_CODFORNE : parseInt(document.getElementById('fornCod').value),
+            AD_CODITEM : parseInt(document.getElementById('item').value),
+            AD_PAGINA : parseInt(document.getElementById('page').value),
+        }
+
+            fetch(`http://192.168.0.253:3336/ConsultaEstoqueLoja/`, {
+                    method: 'POST',
+                    headers: {
+                        Accept: 'application.json',
+                        'Content-Type': 'application/json',
+                        "Access-Control-Allow-Origin": "*"
+                    },
+                    body: JSON.stringify({
+                        "CODEMP": valores.CODEMP,
+                        "AD_CODREV": valores.AD_CODREV ? valores.AD_CODREV : 0,
+                        "AD_CODFORNE": valores.AD_CODFORNE ? valores.AD_CODFORNE : 0,
+                        "AD_CODITEM": valores.AD_CODITEM ? valores.AD_CODITEM : 0,
+                        "AD_PAGINA": valores.AD_PAGINA ? valores.AD_PAGINA : 0,
+                    })
+                })
+                    .then(resp => {
+                        if(valores.CODEMP){
+                        return resp.json()
+                    }else{
+                        alert("Favor Usar login de Loja")
+                    }})
+                    .then(resp => {
+                        if (resp.Error){
+                            console.log(resp)
+                            alert(resp.Error.split(", por favor!")[0] +".")
+                        }else{
+                            let tabela = document.getElementById('estoqueTable')
+                            tabela.innerHTML = `<thead>
+                                    <tr>
+                                        <th>CODIGO EMPRESA</th>
+                                        <th>NOME FORN</th>
+                                        <th>COD FONECEDOR</th>
+                                        <th>ITEM</th>
+                                        <th>TAMANHO</th>
+                                        <th>COD REVISTA</th>
+                                        <th>PAG</th>
+                                        <th>PRECO</th>
+                                        <th>REVISTA</th>
+                                        <th>DESCRICAO</th>
+                                        <th>ESTOQUE</th>
+                                        <th>ÚLTIMA ATUALIZAÇÃO</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>`;
+                            tabela = document.querySelector('#estoqueTable tbody')
+                            var soma = [0,0];
+                            for (let objeto of resp) {
+                                let linha = tabela.insertRow();
+                                for (let chave in objeto) {
+                                    if (chave === 'VERIFICARESTOQUEvalue') {
+                                        objeto[chave] = objeto[chave].split("T")[0]
+                                    }else if (chave === 'ESTOQUE'){
+                                        var estoqueTMP = objeto[chave] == "-" ? 0 : parseFloat(objeto[chave])
+                                        soma[0] = soma[0] + parseFloat(estoqueTMP);
+                                        soma[1] += parseFloat(estoqueTMP) * parseFloat(objeto['AD_VALORFISCAL']).toFixed(2)
+                                    }
+
+                                    if (objeto[chave] == null || objeto[chave] == 'null' || objeto[chave] == 0){
+                                        objeto[chave] = "-"
+                                    }
+                                    let celula = linha.insertCell();
+                                    let texto = document.createTextNode(objeto[chave]);
+                                    celula.appendChild(texto);
+                                    
+                                }
+                            }
+
+                            document.getElementById('totalEstoque').innerHTML = `Qtd. Estoque Total: ${soma[0]} <br> Valor Total: R$ ${Math.round(soma[1]*100)/100}`
+
+                        }
+                    })
+                    .catch(resp => {
+                        console.log("ERROR SERVER")
+                        console.log(resp)
+                    })
+            
+    }
+
+    var uri = 'data:application/vnd.ms-excel;base64,'
+            , template = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><meta http-equiv="content-type" content="application/vnd.ms-excel; charset=UTF-8"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>{worksheet}</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table>{table}</table></body></html>'
+            , base64 = function (s) { return window.btoa(unescape(encodeURIComponent(s))) }
+            , format = function (s, c) { return s.replace(/{(\w+)}/g, function (m, p) { return c[p]; }) }
+
+
+        function exportaExcel(table, nomeArquivo) {
+            if (!table.nodeType) table = document.getElementById(table)
+            var ctx = { worksheet: 'Plan 1', table: table.innerHTML }
+            var link = document.createElement("a");
+            link.href = uri + base64(format(template, ctx));
+            link.download = nomeArquivo + ".xls";
+            link.click();
+        }
+
+    </script>
+</body>
+
+</html>
