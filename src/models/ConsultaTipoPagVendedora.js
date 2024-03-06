@@ -15,51 +15,52 @@ exports.REST = async (req, res) => {
         
         const selectTMP = `
                         SELECT 
-                            VEND.VEN_NOME,  
+                              
+                            ${CODIGOVEND != '' ? 'VEND.VEN_NOME,' : ''}
                             COUNT(PAG.FORPAG_COD) AS QUANTIDADE, 
                             PAG.FORPAG_COD, 
                             FORMPAG.FORPAG_DESC,
-                            CODIGOVEND, 
+                            ${CODIGOVEND != '' ? 'CODIGOVEND,' : ''}
                             SUM(CAIPAG_VALOR) AS CAIPAG_VALOR
 
                             FROM 
                             (
                                 SELECT 
                                     COALESCE(PEDIDOS.DOCTOCLIE, TROCAS.DOCTOCLIE) AS DOCTOCLIE,
-                                    PEDIDOS.CODIGOVEND AS CODIGOVEND,
+                                    ${CODIGOVEND != '' ? 'PEDIDOS.CODIGOVEND AS CODIGOVEND,' : ''}
                                     COALESCE(PEDIDOS.DATA, TROCAS.DATA) AS DATA,
                                     CAST(COALESCE(PEDIDOS.TOTALGERAL,0) - COALESCE(TROCAS.TOTALGERAL, 0) AS NUMERIC(10, 2)) 
                                     AS TOTALGERAL,
                                     COALESCE(PEDIDOS.LOJA_ORIGEM, TROCAS.LOJA_ORIGEM) AS LOJA_ORIGEM
                                 FROM 
                                     (
-                                    SELECT DOCTOCLIE,CODIGOVEND, DATA, SUM(TOTALGERAL) AS TOTALGERAL, LOJA_ORIGEM
+                                    SELECT DOCTOCLIE, ${CODIGOVEND != '' ? 'CODIGOVEND,' : ''} DATA, SUM(TOTALGERAL) AS TOTALGERAL, LOJA_ORIGEM
                                     FROM PUBLIC.ERP_PEDIDOS
                                     WHERE 
                                         DATA >= '${DATAINIT}' 
                                         ${DATAFIM != '' ? `AND DATA <= '${DATAFIM}'` : ''}
                                         ${CODIGOVEND != '' ? `AND CODIGOVEND = ${CODIGOVEND}` : ''}
                                         ${LOJAORIGEM ? `AND LOJA_ORIGEM = ${LOJAORIGEM}` : ''}
-                                    GROUP BY DOCTOCLIE, CODIGOVEND, DATA, LOJA_ORIGEM
+                                    GROUP BY DOCTOCLIE, ${CODIGOVEND != '' ? 'CODIGOVEND,' : ''} DATA, LOJA_ORIGEM
                                     ) AS PEDIDOS
                                     
                                 FULL JOIN 
 
                                     (
-                                    SELECT DOCTOCLIE, CODIGOVEND, DATA, SUM(TOTALGERAL) AS TOTALGERAL, LOJA_ORIGEM
+                                    SELECT DOCTOCLIE, ${CODIGOVEND != '' ? 'CODIGOVEND,' : ''} DATA, SUM(TOTALGERAL) AS TOTALGERAL, LOJA_ORIGEM
                                     FROM PUBLIC.ERP_TROCAS
                                     WHERE 
                                         DATA >= '${DATAINIT}' 
                                         ${DATAFIM != '' ? `AND DATA <= '${DATAFIM}'` : ''}
                                         ${CODIGOVEND != '' ? `AND CODIGOVEND = ${CODIGOVEND}` : ''}
                                         ${LOJAORIGEM ? `AND LOJA_ORIGEM = ${LOJAORIGEM}` : ''}
-                                        GROUP BY DOCTOCLIE, CODIGOVEND, DATA, LOJA_ORIGEM
+                                        GROUP BY DOCTOCLIE, ${CODIGOVEND != '' ? 'CODIGOVEND,' : ''} DATA, LOJA_ORIGEM
                                     ) AS TROCAS
                                 
                                 ON PEDIDOS.DOCTOCLIE = TROCAS.DOCTOCLIE 
                                 AND PEDIDOS.DATA = TROCAS.DATA 
                                 AND PEDIDOS.LOJA_ORIGEM = TROCAS.LOJA_ORIGEM 
-                                AND PEDIDOS.CODIGOVEND = TROCAS.CODIGOVEND
+                                ${CODIGOVEND != '' ? 'AND PEDIDOS.CODIGOVEND = TROCAS.CODIGOVEND' : ''}
 
                                 ORDER BY PEDIDOS.DOCTOCLIE 
                                 ) AS PE_MENOS_TROCA
@@ -69,15 +70,15 @@ exports.REST = async (req, res) => {
                             AND PAG.CAIPAG_DATA_CAIXA::DATE = PE_MENOS_TROCA.DATA 
                             AND PAG.LOJ_NUM = PE_MENOS_TROCA.LOJA_ORIGEM
 
-                            INNER JOIN ERP_VENDEDORES VEND
-                            ON VEND.VEN_NUMERO = PE_MENOS_TROCA.CODIGOVEND
+                            
+                            ${CODIGOVEND != '' ? 'INNER JOIN ERP_VENDEDORES VEND ON VEND.VEN_NUMERO = PE_MENOS_TROCA.CODIGOVEND' : ''}
 
                             INNER JOIN ERP_FORMA_PAGAMENTO FORMPAG
                             ON FORMPAG.FORPAG_COD = PAG.FORPAG_COD
                             
                             WHERE 
-                              FORMPAG.FORPAG_COD NOT IN (9,13,14,15,19,20)
-                            GROUP BY CODIGOVEND, VEND.VEN_NOME, PAG.FORPAG_COD, FORMPAG.FORPAG_DESC`;
+                              FORMPAG.FORPAG_COD NOT IN (0,7,8,9,13,14,15,16,17,18,19,20,21,22)
+                            GROUP BY ${CODIGOVEND != '' ? 'CODIGOVEND, VEND.VEN_NOME,' : ''} PAG.FORPAG_COD, FORMPAG.FORPAG_DESC`;
 
         console.log(selectTMP)
         const result = await db.query(selectTMP);
